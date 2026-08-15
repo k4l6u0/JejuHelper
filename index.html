@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="version" content="v3.4.0">
-<title>2026 濟州島自駕即時行程導航助手</title>
+<meta name="version" content="v3.6.0">
+<title>Jeju Helper</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -16,6 +16,7 @@
     --text-muted: #94a3b8;
     --highlight: #f59e0b;
     --success: #10b981;
+    --danger: #ef4444;
     --gemini-purple: #a855f7;
     --tag-bg: #334155;
   }
@@ -32,7 +33,46 @@
     padding-bottom: 80px;
     font-size: 15px;
     line-height: 1.5;
+    overscroll-behavior-y: contain;
   }
+  
+  /* Pull to Refresh Indicator */
+  #ptr-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(30, 41, 59, 0.95);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    transform: translateY(-100%);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--card-border);
+  }
+  #ptr-indicator.visible {
+    transform: translateY(0);
+  }
+  .ptr-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(56, 189, 248, 0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: ptr-spin 0.8s linear infinite;
+  }
+  @keyframes ptr-spin {
+    to { transform: rotate(360deg); }
+  }
+
   header {
     background: #1e293b;
     border-bottom: 1px solid var(--card-border);
@@ -48,95 +88,110 @@
     align-items: center;
     margin-bottom: 8px;
   }
-  h1 {
-    font-size: 16px;
-    font-weight: 700;
+  .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: -0.3px;
+  }
+  .brand-logo .logo-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .brand-logo span.highlight {
     color: var(--accent);
-    display: flex;
-    align-items: center;
-    gap: 6px;
   }
-  .header-badges {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .refresh-btn {
+  .version-tag {
     background: #334155;
+    color: #94a3b8;
     border: 1px solid #475569;
-    color: #e2e8f0;
     padding: 3px 8px;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    transition: all 0.2s ease;
-  }
-  .refresh-btn:active {
-    background: var(--accent);
-    color: #0f172a;
-    transform: scale(0.95);
-  }
-  .clock-badge {
-    background: rgba(56, 189, 248, 0.15);
-    color: var(--accent);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
+    font-family: monospace;
   }
 
-  /* Live Compass & Status Utility Bar */
+  /* Centered 1.5x Live Compass Utility Bar */
   .utility-bar {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     background: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    padding: 6px 10px;
-    margin-bottom: 8px;
-    font-size: 12px;
+    border: 1.5px solid #334155;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
   }
-  .compass-box {
+  .utility-bar.active {
+    border-color: #38bdf8;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+  }
+  .compass-center-content {
     display: flex;
     align-items: center;
-    gap: 8px;
-    cursor: pointer;
+    justify-content: center;
+    gap: 12px;
   }
   .compass-arrow-wrap {
-    width: 20px;
-    height: 20px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #1e293b;
     border-radius: 50%;
-    border: 1px solid #475569;
+    border: 1.5px solid #475569;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+    flex-shrink: 0;
   }
   .compass-needle {
-    font-size: 13px;
+    font-size: 18px;
     line-height: 1;
     display: inline-block;
     transition: transform 0.1s linear;
     color: #ef4444;
   }
+  .compass-text-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
   .compass-text {
+    font-size: 15px;
     font-weight: 700;
     color: #f8fafc;
+    line-height: 1.2;
   }
-  .compass-hint {
-    font-size: 10px;
+  .compass-subtext {
+    font-size: 11px;
     color: #94a3b8;
-    background: #1e293b;
-    border: 1px solid #334155;
-    padding: 2px 6px;
-    border-radius: 4px;
+    margin-top: 2px;
+  }
+  .compass-stop-badge {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid #ef4444;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+  }
+  .compass-stop-badge.visible {
+    display: block;
   }
 
   /* Weather-rich Date Selector */
@@ -491,25 +546,35 @@
 </head>
 <body>
 
+<!-- Pull to Refresh Floating Bar -->
+<div id="ptr-indicator">
+  <span class="ptr-spinner" id="ptr-spinner" style="display:none;"></span>
+  <span id="ptr-text">👇 下拉以重新定位行程</span>
+</div>
+
 <header>
   <div class="header-top">
-    <h1>🧭 濟州自駕即時助理</h1>
+    <div class="brand-logo">
+      <span class="logo-icon">🍊</span>
+      <span>Jeju <span class="highlight">Helper</span></span>
+    </div>
     <div class="header-badges">
-      <button class="refresh-btn" onclick="manualRefresh()" title="重新計算目前行程">🔄 重新定位</button>
-      <span class="version-tag" id="ver-badge">v3.4.0</span>
-      <div class="clock-badge" id="live-clock">KST --:--:--</div>
+      <span class="version-tag" id="ver-badge">v3.6.0</span>
     </div>
   </div>
 
-  <!-- Utility bar: Compass & Heading -->
-  <div class="utility-bar">
-    <div class="compass-box" onclick="requestCompassPermission()">
+  <!-- Centered 1.5x Live Compass Utility Bar -->
+  <div class="utility-bar" id="compass-utility-bar" onclick="handleCompassClick(event)">
+    <div class="compass-center-content">
       <div class="compass-arrow-wrap">
         <span class="compass-needle" id="compass-needle">▲</span>
       </div>
-      <span class="compass-text" id="compass-text">🧭 坐向：點擊啟動指南針</span>
+      <div class="compass-text-group">
+        <span class="compass-text" id="compass-text">🧭 坐向：尚未啟動</span>
+        <span class="compass-subtext" id="compass-subtext">點擊啟動即時指南針</span>
+      </div>
     </div>
-    <div class="compass-hint" id="compass-hint">支援 iPhone / Android</div>
+    <button class="compass-stop-badge" id="compass-stop-btn" onclick="stopCompass(event)">⏹️ 停止</button>
   </div>
 
   <!-- Date tabs -->
@@ -571,21 +636,21 @@
   <div class="itinerary-list" id="card-container"></div>
 
   <div class="tips-box">
-    <strong>💡 使用說明與指南針提示：</strong><br>
-    • <strong>🧭 即時坐向</strong>：點擊上方「🧭 坐向」區塊即可啟用手機陀螺儀/磁力計（iPhone 會跳出權限確認），轉動手機即可即時顯示當前方塊度數與方位（如「正北 0°」、「東北 45°」）。<br>
-    • <strong>🔄 重新定位</strong>：手動切換日期後，若想立刻回到「目前時間點該去的地點」，點擊右上角按鈕即可。<br>
+    <strong>💡 手勢與指南針提示：</strong><br>
+    • <strong>🔄 下拉重新定位 (Pull to Refresh)</strong>：手動切換日期後，只要在頁面頂部向下拉動即可重新判定並鎖定當前時間對應的景點。<br>
+    • <strong>🧭 即時坐向</strong>：置中 1.5x 羅盤設計。點擊啟動手機方向感測，啟動後右側會出現「⏹️ 停止」按鈕可隨時關閉節省電力。<br>
     • <strong>✨ Gemini 導遊</strong>：點擊後會自動複製專屬提示詞並開啟視窗，直接按下 <strong>Ctrl+V / Cmd+V 貼上</strong> 送出即可。
   </div>
 
   <div class="footer-meta">
-    濟州自駕即時助理 • Version Code: <span id="ver-footer">v3.4.0 (Build 20260817)</span>
+    Jeju Helper • Version Code: <span id="ver-footer">v3.6.0 (Build 20260817)</span>
   </div>
 </main>
 
 <div id="toast">已複製到剪貼簿</div>
 
 <script>
-const VERSION_CODE = "v3.4.0 (Build 20260817)";
+const VERSION_CODE = "v3.6.0 (Build 20260817)";
 
 const tripData = {
   1: {
@@ -945,22 +1010,12 @@ const tripData = {
 
 let currentSelectedDay = 1;
 
-// Get current Korean Time (UTC+9)
+// Korean Time (UTC+9) calculation
 function getKSTDate() {
   const now = new Date();
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   return new Date(utc + (3600000 * 9));
 }
-
-function updateClock() {
-  const kst = getKSTDate();
-  const h = String(kst.getHours()).padStart(2, '0');
-  const m = String(kst.getMinutes()).padStart(2, '0');
-  const s = String(kst.getSeconds()).padStart(2, '0');
-  document.getElementById('live-clock').innerText = `KST ${h}:${m}:${s}`;
-}
-setInterval(updateClock, 1000);
-updateClock();
 
 // Copy text utility
 function copyText(text, label) {
@@ -983,7 +1038,7 @@ function showToast(msg) {
   const toast = document.getElementById('toast');
   toast.innerText = msg;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3500);
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
 // Ask Gemini by Prompt & URL
@@ -1150,7 +1205,7 @@ function selectDay(dayIndex) {
   document.getElementById('focus-banner').style.display = 'none';
 }
 
-function manualRefresh() {
+function autoRelocate() {
   const auto = autoDetectDayAndHighlight();
   const focusBanner = document.getElementById('focus-banner');
   const focusContent = document.getElementById('focus-content');
@@ -1171,7 +1226,60 @@ function manualRefresh() {
 }
 
 /* =========================================================
-   COMPASS & DEVICE ORIENTATION LOGIC
+   PULL TO REFRESH IMPLEMENTATION
+   ========================================================= */
+let startY = 0;
+let currentY = 0;
+let isPulling = false;
+const ptrIndicator = document.getElementById('ptr-indicator');
+const ptrText = document.getElementById('ptr-text');
+const ptrSpinner = document.getElementById('ptr-spinner');
+
+window.addEventListener('touchstart', (e) => {
+  if (window.scrollY === 0) {
+    startY = e.touches[0].pageY;
+    isPulling = true;
+  }
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+  if (!isPulling) return;
+  currentY = e.touches[0].pageY;
+  const distance = currentY - startY;
+
+  if (distance > 30 && window.scrollY === 0) {
+    ptrIndicator.classList.add('visible');
+    if (distance > 80) {
+      ptrText.innerText = "⚡ 釋放立即重新定位";
+    } else {
+      ptrText.innerText = "👇 下拉以重新定位行程";
+    }
+  }
+}, { passive: true });
+
+window.addEventListener('touchend', () => {
+  if (!isPulling) return;
+  const distance = currentY - startY;
+
+  if (distance > 80 && window.scrollY === 0) {
+    ptrText.innerText = "正在重新計算行程...";
+    ptrSpinner.style.display = "inline-block";
+    
+    setTimeout(() => {
+      autoRelocate();
+      ptrSpinner.style.display = "none";
+      ptrIndicator.classList.remove('visible');
+    }, 400);
+  } else {
+    ptrIndicator.classList.remove('visible');
+  }
+  isPulling = false;
+  startY = 0;
+  currentY = 0;
+});
+
+/* =========================================================
+   CENTERED COMPASS & DEVICE ORIENTATION LOGIC
    ========================================================= */
 let isCompassActive = false;
 
@@ -1202,14 +1310,12 @@ function degreesToDirection(deg) {
 }
 
 function handleOrientation(event) {
-  let heading = null;
+  if (!isCompassActive) return;
 
-  // iOS WebKit compass heading (Absolute true heading)
+  let heading = null;
   if (typeof event.webkitCompassHeading !== "undefined") {
     heading = event.webkitCompassHeading;
-  } 
-  // Standard DeviceOrientation API (Android / other browsers)
-  else if (event.absolute && event.alpha !== null) {
+  } else if (event.absolute && event.alpha !== null) {
     heading = 360 - event.alpha;
   } else if (event.alpha !== null) {
     heading = 360 - event.alpha;
@@ -1223,70 +1329,76 @@ function handleOrientation(event) {
     const dirStr = degreesToDirection(heading);
     document.getElementById('compass-text').innerText = `🧭 ${dirStr} ${heading}°`;
     document.getElementById('compass-needle').style.transform = `rotate(${heading}deg)`;
-    document.getElementById('compass-hint').innerText = "即時連線中";
-    document.getElementById('compass-hint').style.color = "#10b981";
+    document.getElementById('compass-subtext').innerText = "即時感測中 (轉動手機即時更新)";
   }
 }
 
-function requestCompassPermission() {
-  if (isCompassActive) {
-    showToast("指南針已在持續運作中");
-    return;
-  }
+function stopCompass(e) {
+  if (e) e.stopPropagation();
+  window.removeEventListener('deviceorientation', handleOrientation, true);
+  window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+  isCompassActive = false;
 
-  // iOS 13+ requires explicit user permission request via user action
+  const bar = document.getElementById('compass-utility-bar');
+  const text = document.getElementById('compass-text');
+  const subtext = document.getElementById('compass-subtext');
+  const needle = document.getElementById('compass-needle');
+  const stopBtn = document.getElementById('compass-stop-btn');
+
+  bar.classList.remove('active');
+  stopBtn.classList.remove('visible');
+  text.innerText = "🧭 坐向：已暫停";
+  subtext.innerText = "點擊以重新啟用指南針";
+  needle.style.transform = "rotate(0deg)";
+  showToast("已停止指南針顯示 (節省電力)");
+}
+
+function handleCompassClick(e) {
+  if (!isCompassActive) {
+    startCompass();
+  }
+}
+
+function startCompass() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission()
       .then(response => {
         if (response === 'granted') {
           window.addEventListener('deviceorientation', handleOrientation, true);
-          isCompassActive = true;
+          activateCompassUI();
           showToast("已取得 iPhone 指南針權限！");
         } else {
-          showToast("已拒絕指南針權限 (可在 iOS 設定中重啟)");
+          showToast("已拒絕指南針權限 (可在 iOS 設定開啟)");
         }
       })
       .catch(err => {
         console.error(err);
         showToast("無法啟用指南針: " + err.message);
       });
-  } 
-  // Android & Other standard browsers
-  else if ('ondeviceorientationabsolute' in window) {
+  } else if ('ondeviceorientationabsolute' in window) {
     window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-    isCompassActive = true;
+    activateCompassUI();
     showToast("已啟動 Android 絕對方位指南針");
   } else if ('ondeviceorientation' in window) {
     window.addEventListener('deviceorientation', handleOrientation, true);
-    isCompassActive = true;
+    activateCompassUI();
     showToast("已啟動指南針");
   } else {
     showToast("您的裝置或瀏覽器不支援陀螺儀/指南針 API");
   }
 }
 
+function activateCompassUI() {
+  isCompassActive = true;
+  const bar = document.getElementById('compass-utility-bar');
+  const stopBtn = document.getElementById('compass-stop-btn');
+  bar.classList.add('active');
+  stopBtn.classList.add('visible');
+  document.getElementById('compass-subtext').innerText = "感測中，請轉動手機...";
+}
+
 window.addEventListener('DOMContentLoaded', () => {
-  const auto = autoDetectDayAndHighlight();
-  const focusBanner = document.getElementById('focus-banner');
-  const focusContent = document.getElementById('focus-content');
-  const focusTimeTag = document.getElementById('focus-time-tag');
-
-  if (auto.isToday && auto.item) {
-    focusBanner.style.display = 'block';
-    focusTimeTag.innerText = `Day ${auto.day} 當前`;
-    focusContent.innerHTML = `${auto.item.title} <span style="font-size:13px; font-weight:normal; color:#93c5fd;">(${auto.item.time})</span>`;
-    renderDay(auto.day, auto.item.id);
-  } else {
-    focusBanner.style.display = 'block';
-    focusTimeTag.innerText = `預設起點 (Day 1)`;
-    focusContent.innerText = `8/17 第一天行程：09:25 抵達濟州國際機場`;
-    renderDay(1, 'd1-1');
-  }
-
-  // Auto try non-iOS direct orientation listener
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
-    window.addEventListener('deviceorientation', handleOrientation, true);
-  }
+  autoRelocate();
 });
 </script>
 </body>
