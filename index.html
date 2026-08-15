@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="version" content="v3.8.0">
+<meta name="version" content="v3.9.0">
 <title>Jeju Helper</title>
 <style>
   :root {
@@ -32,20 +32,19 @@
   body {
     background-color: var(--bg);
     color: var(--text-main);
-    padding-bottom: 80px;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     font-size: 15px;
     line-height: 1.5;
-    /* 取消 contain，避免 PWA 模式下阻斷頂部 touch 事件 */
     touch-action: pan-y;
   }
   
-  /* Pull to Refresh Indicator (PWA Optimized) */
+  /* Pull to Refresh Indicator (PWA Safe Area Aware) */
   #ptr-indicator {
     position: fixed;
-    top: 0;
+    top: env(safe-area-inset-top, 0px);
     left: 0;
     right: 0;
-    height: 52px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -80,7 +79,11 @@
   header {
     background: #1e293b;
     border-bottom: 1px solid var(--card-border);
-    padding: 12px 16px 10px 16px;
+    /* 核心修正：加入 iOS 瀏海/動態島 Safe Area Padding */
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-left: calc(16px + env(safe-area-inset-left, 0px));
+    padding-right: calc(16px + env(safe-area-inset-right, 0px));
+    padding-bottom: 10px;
     position: sticky;
     top: 0;
     z-index: 50;
@@ -549,7 +552,7 @@
   /* Toast Notification */
   #toast {
     position: fixed;
-    bottom: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     transform: translateX(-50%) translateY(100px);
     background: var(--success);
@@ -589,7 +592,7 @@
     </div>
     <div class="header-right">
       <div class="pwa-refresh-icon" onclick="autoRelocate()" title="重新定位目前時間行程">🔄</div>
-      <span class="version-tag" id="ver-badge">v3.8.0</span>
+      <span class="version-tag" id="ver-badge">v3.9.0</span>
     </div>
   </div>
 
@@ -667,6 +670,7 @@
 
   <div class="tips-box">
     <strong>💡 導航與 PWA 使用提示：</strong><br>
+    • <strong>頂部安全區域適配</strong>：已加入 iOS Safe Area Padding，頂部時間、狀態列與動態島不再被遮擋。<br>
     • <strong>🔄 重新定位</strong>：支援頂部下拉釋放重整，或直接點擊右上角的 <strong>🔄</strong> 按鈕。<br>
     • <strong>四大導航 App</strong>：支援 💛 Kakao Map、💚 NAVER Map、🔴 Google Map 與 🚙 Waze。<br>
     • <strong>🧭 即時坐向</strong>：置中 1.5x 羅盤，點擊啟動方向感測，右側「⏹️ 停止」可關閉感測節電。<br>
@@ -674,14 +678,14 @@
   </div>
 
   <div class="footer-meta">
-    Jeju Helper • Version Code: <span id="ver-footer">v3.8.0 (Build 20260817)</span>
+    Jeju Helper • Version Code: <span id="ver-footer">v3.9.0 (Build 20260817)</span>
   </div>
 </main>
 
 <div id="toast">已複製到剪貼簿</div>
 
 <script>
-const VERSION_CODE = "v3.8.0 (Build 20260817)";
+const VERSION_CODE = "v3.9.0 (Build 20260817)";
 
 const tripData = {
   1: {
@@ -773,7 +777,7 @@ const tripData = {
         korName: "서귀포매일올레시장",
         engName: "Seogwipo Olle Market",
         phone: "064-762-1949",
-        address: "제주 서귀포시 중앙로62번길 18",
+        address: "제주 서귀포시 中央로62번길 18",
         note: "高評價黑豬肉推薦：每日偶來豚 (매일올레돈 / 064-763-9289) 或 男妹黑豬肉 (남매흑돼지 / 064-763-6633)。",
         kakaoQuery: "서귀포매일올레시장",
         naverQuery: "서귀포매일올레시장",
