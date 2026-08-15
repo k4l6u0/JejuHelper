@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>2026 濟州島自駕即時行程導航助手 V2</title>
+<meta name="version" content="v3.2.0">
+<title>2026 濟州島自駕即時行程導航助手</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -15,6 +16,7 @@
     --text-muted: #94a3b8;
     --highlight: #f59e0b;
     --success: #10b981;
+    --gemini-purple: #a855f7;
     --tag-bg: #334155;
   }
   * {
@@ -54,13 +56,28 @@
     align-items: center;
     gap: 8px;
   }
+  .header-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .version-tag {
+    background: #334155;
+    color: #94a3b8;
+    border: 1px solid #475569;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: monospace;
+  }
   .clock-badge {
     background: rgba(56, 189, 248, 0.15);
     color: var(--accent);
     border: 1px solid rgba(56, 189, 248, 0.3);
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
@@ -291,7 +308,7 @@
     line-height: 1.4;
   }
 
-  /* Action Buttons (3 Maps: Kakao, NAVER, Google Maps) */
+  /* Action Buttons (2 Rows: Maps + Gemini Guide) */
   .card-actions {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -318,7 +335,33 @@
   .nav-btn.naver { background: #03c75a; color: #fff; }
   .nav-btn.google { background: #ea4335; color: #fff; }
 
-  /* Bottom Tips Footer */
+  /* Full-width Gemini AI Guide button */
+  .gemini-action-box {
+    margin-top: 6px;
+  }
+  .gemini-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+    border: 1px solid #a855f7;
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+    transition: transform 0.1s ease, filter 0.1s ease;
+  }
+  .gemini-btn:active {
+    transform: scale(0.98);
+    filter: brightness(1.1);
+  }
+
+  /* Bottom Tips & Footer */
   .tips-box {
     margin-top: 24px;
     background: rgba(30, 41, 59, 0.7);
@@ -329,6 +372,13 @@
     color: var(--text-muted);
   }
   .tips-box strong { color: #f8fafc; }
+  .footer-meta {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+  }
 
   /* Toast Notification */
   #toast {
@@ -338,15 +388,18 @@
     transform: translateX(-50%) translateY(100px);
     background: var(--success);
     color: #fff;
-    padding: 8px 16px;
+    padding: 10px 18px;
     border-radius: 20px;
     font-size: 13px;
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 100;
     pointer-events: none;
+    max-width: 90%;
+    text-align: center;
+    line-height: 1.4;
   }
   #toast.show {
     transform: translateX(-50%) translateY(0);
@@ -359,7 +412,10 @@
 <header>
   <div class="header-top">
     <h1>🧭 濟州自駕即時助理</h1>
-    <div class="clock-badge" id="live-clock">KST --:--:--</div>
+    <div class="header-badges">
+      <span class="version-tag" id="ver-badge">v3.2.0</span>
+      <div class="clock-badge" id="live-clock">KST --:--:--</div>
+    </div>
   </div>
   <div class="date-selector" id="day-tabs">
     <button class="day-btn" onclick="selectDay(1)">Day 1<span class="sub">8/17 (一)</span></button>
@@ -399,16 +455,21 @@
   <div class="itinerary-list" id="card-container"></div>
 
   <div class="tips-box">
-    <strong>💡 Polestar 2 車載導航與地圖連線提示：</strong><br>
-    • <strong>車載導航輸入</strong>：若使用車機原生導航搜尋 POI，點擊下方「複製電話」或「複製韓文名」即可在車機/手機上秒貼搜尋。<br>
-    • <strong>Google Map 連結</strong>：點擊「🔴 Google Map」按鈕可直接開啟 Google 地圖搜尋該地點與查看評論。<br>
-    • <strong>韓國精準開車導航</strong>：推薦使用 <strong>Apple CarPlay</strong> 連線手機開啟 <strong>Kakao Map</strong> 或 <strong>NAVER Map</strong>。
+    <strong>💡 使用說明與導航技巧：</strong><br>
+    • <strong>✨ Gemini 導遊（已複製 Prompt）</strong>：點擊後會直接將專屬提示詞複製進剪貼簿並開啟 Gemini 視窗，切換過去後直接按下 <strong>Ctrl+V / Cmd+V 貼上</strong> 送出即可！<br>
+    • <strong>地圖導航</strong>：自駕推薦以 Apple CarPlay 開啟 <strong>Kakao Map</strong> 或 <strong>NAVER Map</strong>；查看評價與照片可直接點 <strong>🔴 Google Map</strong>。
+  </div>
+
+  <div class="footer-meta">
+    濟州自駕即時助理 • Version Code: <span id="ver-footer">v3.2.0 (Build 20260817)</span>
   </div>
 </main>
 
 <div id="toast">已複製到剪貼簿</div>
 
 <script>
+const VERSION_CODE = "v3.2.0 (Build 20260817)";
+
 const tripData = {
   1: {
     dateStr: "2026-08-17",
@@ -788,7 +849,7 @@ updateClock();
 function copyText(text, label) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => {
-      showToast(`已複製 ${label}: ${text}`);
+      showToast(`已複製 ${label}`);
     });
   } else {
     const ta = document.createElement('textarea');
@@ -797,7 +858,7 @@ function copyText(text, label) {
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    showToast(`已複製 ${label}: ${text}`);
+    showToast(`已複製 ${label}`);
   }
 }
 
@@ -805,7 +866,25 @@ function showToast(msg) {
   const toast = document.getElementById('toast');
   toast.innerText = msg;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2000);
+  setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// Ask Gemini by Prompt & URL
+function askGeminiGuide(title, korName, engName, address) {
+  const prompt = `我現在正在濟州島自駕旅遊，目前地點在【${korName} / ${engName}】（地址：${address}）。
+請以繁體中文 (台灣) 為我提供：
+1. 💡 此地點的 1 分鐘精華背景與必看亮點。
+2. 🚗 距離此處車程 10~15 分鐘以內、在地人高評價（4.2 星以上）的 2 個私房隱藏景點或必吃美食/咖啡廳（請附上韓文名以便導航）。
+3. ⚠️ 現場參觀、自駕停車或避坑的實用建議。`;
+
+  // 1. Copy Prompt to clipboard for reliable paste
+  copyText(prompt, "提示詞！跳轉後直接按 Ctrl+V 貼上送出");
+
+  // 2. Open Gemini Web
+  const geminiUrl = `https://gemini.google.com/app`;
+  setTimeout(() => {
+    window.open(geminiUrl, '_blank');
+  }, 500);
 }
 
 // Determine auto day and active slot
@@ -860,7 +939,6 @@ function updateWeatherBanner(dayData) {
 function renderDay(dayIndex, highlightItemId = null) {
   currentSelectedDay = dayIndex;
 
-  // update tabs
   const buttons = document.querySelectorAll('.day-btn');
   buttons.forEach((b, idx) => {
     if (idx + 1 === dayIndex) b.classList.add('active');
@@ -879,8 +957,12 @@ function renderDay(dayIndex, highlightItemId = null) {
     card.className = `card ${isHighlighted ? 'now-card' : ''}`;
     card.id = item.id;
 
-    // Google Maps direct search URL
     const googleMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.googleQuery)}`;
+
+    const safeTitle = item.title.replace(/'/g, "\'");
+    const safeKor = item.korName.replace(/'/g, "\'");
+    const safeEng = item.engName.replace(/'/g, "\'");
+    const safeAddr = item.address.replace(/'/g, "\'");
 
     card.innerHTML = `
       <div class="card-header">
@@ -896,7 +978,7 @@ function renderDay(dayIndex, highlightItemId = null) {
         <div class="info-row">
           <span class="info-label">韓文名稱</span>
           <span class="info-val">${item.korName}</span>
-          <button class="copy-btn" onclick="copyText('${item.korName}', '韓文名')">複製</button>
+          <button class="copy-btn" onclick="copyText('${safeKor}', '韓文名')">複製</button>
         </div>
         <div class="info-row">
           <span class="info-label">英文/中文</span>
@@ -910,7 +992,7 @@ function renderDay(dayIndex, highlightItemId = null) {
         <div class="info-row">
           <span class="info-label">韓文地址</span>
           <span class="info-val" style="font-size:12px;">${item.address}</span>
-          <button class="copy-btn" onclick="copyText('${item.address}', '地址')">複製</button>
+          <button class="copy-btn" onclick="copyText('${safeAddr}', '地址')">複製</button>
         </div>
       </div>
 
@@ -927,12 +1009,17 @@ function renderDay(dayIndex, highlightItemId = null) {
           <span>🔴 Google Map</span>
         </a>
       </div>
+
+      <div class="gemini-action-box">
+        <button class="gemini-btn" onclick="askGeminiGuide('${safeTitle}', '${safeKor}', '${safeEng}', '${safeAddr}')">
+          <span>✨ 用 Gemini 找周邊私房景點/美食與深度介紹</span>
+        </button>
+      </div>
     `;
 
     container.appendChild(card);
   });
 
-  // Scroll to active item if applicable
   if (highlightItemId) {
     const target = document.getElementById(highlightItemId);
     if (target) {
@@ -948,7 +1035,6 @@ function selectDay(dayIndex) {
   document.getElementById('focus-banner').style.display = 'none';
 }
 
-// Initial Auto Load
 window.addEventListener('DOMContentLoaded', () => {
   const auto = autoDetectDayAndHighlight();
   
