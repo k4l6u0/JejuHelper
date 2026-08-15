@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="version" content="v3.2.0">
+<meta name="version" content="v3.4.0">
 <title>2026 濟州島自駕即時行程導航助手</title>
 <style>
   :root {
@@ -36,7 +36,7 @@
   header {
     background: #1e293b;
     border-bottom: 1px solid var(--card-border);
-    padding: 16px;
+    padding: 12px 16px 10px 16px;
     position: sticky;
     top: 0;
     z-index: 50;
@@ -46,30 +46,39 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   h1 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--accent);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .header-badges {
     display: flex;
     align-items: center;
     gap: 6px;
   }
-  .version-tag {
+  .refresh-btn {
     background: #334155;
-    color: #94a3b8;
     border: 1px solid #475569;
+    color: #e2e8f0;
     padding: 3px 8px;
     border-radius: 12px;
     font-size: 11px;
     font-weight: 600;
-    font-family: monospace;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.2s ease;
+  }
+  .refresh-btn:active {
+    background: var(--accent);
+    color: #0f172a;
+    transform: scale(0.95);
   }
   .clock-badge {
     background: rgba(56, 189, 248, 0.15);
@@ -81,37 +90,110 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
+
+  /* Live Compass & Status Utility Bar */
+  .utility-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .compass-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .compass-arrow-wrap {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1e293b;
+    border-radius: 50%;
+    border: 1px solid #475569;
+  }
+  .compass-needle {
+    font-size: 13px;
+    line-height: 1;
+    display: inline-block;
+    transition: transform 0.1s linear;
+    color: #ef4444;
+  }
+  .compass-text {
+    font-weight: 700;
+    color: #f8fafc;
+  }
+  .compass-hint {
+    font-size: 10px;
+    color: #94a3b8;
+    background: #1e293b;
+    border: 1px solid #334155;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Weather-rich Date Selector */
   .date-selector {
     display: flex;
     gap: 6px;
     overflow-x: auto;
-    padding-bottom: 4px;
+    padding-bottom: 2px;
     scrollbar-width: none;
   }
   .date-selector::-webkit-scrollbar { display: none; }
   .day-btn {
-    flex: 0 0 auto;
+    flex: 1 0 calc(20% - 5px);
+    min-width: 68px;
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     color: var(--text-muted);
-    padding: 6px 12px;
+    padding: 6px 4px;
     border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
+    text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
   }
   .day-btn.active {
     background: var(--accent);
     color: #0f172a;
     border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
   }
-  .day-btn .sub {
+  .day-btn .day-title {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .day-btn .day-date {
     font-size: 10px;
-    font-weight: 400;
-    opacity: 0.8;
-    display: block;
+    font-weight: 500;
+    opacity: 0.85;
   }
+  .day-btn .day-weather-sub {
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 1px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .day-btn.active .day-weather-sub {
+    color: #042f2e;
+    font-weight: 700;
+  }
+  .day-btn:not(.active) .day-weather-sub {
+    color: #38bdf8;
+  }
+
   main {
     padding: 16px;
     max-width: 680px;
@@ -413,16 +495,50 @@
   <div class="header-top">
     <h1>🧭 濟州自駕即時助理</h1>
     <div class="header-badges">
-      <span class="version-tag" id="ver-badge">v3.2.0</span>
+      <button class="refresh-btn" onclick="manualRefresh()" title="重新計算目前行程">🔄 重新定位</button>
+      <span class="version-tag" id="ver-badge">v3.4.0</span>
       <div class="clock-badge" id="live-clock">KST --:--:--</div>
     </div>
   </div>
+
+  <!-- Utility bar: Compass & Heading -->
+  <div class="utility-bar">
+    <div class="compass-box" onclick="requestCompassPermission()">
+      <div class="compass-arrow-wrap">
+        <span class="compass-needle" id="compass-needle">▲</span>
+      </div>
+      <span class="compass-text" id="compass-text">🧭 坐向：點擊啟動指南針</span>
+    </div>
+    <div class="compass-hint" id="compass-hint">支援 iPhone / Android</div>
+  </div>
+
+  <!-- Date tabs -->
   <div class="date-selector" id="day-tabs">
-    <button class="day-btn" onclick="selectDay(1)">Day 1<span class="sub">8/17 (一)</span></button>
-    <button class="day-btn" onclick="selectDay(2)">Day 2<span class="sub">8/18 (二)</span></button>
-    <button class="day-btn" onclick="selectDay(3)">Day 3<span class="sub">8/19 (三)</span></button>
-    <button class="day-btn" onclick="selectDay(4)">Day 4<span class="sub">8/20 (四)</span></button>
-    <button class="day-btn" onclick="selectDay(5)">Day 5<span class="sub">8/21 (五)</span></button>
+    <button class="day-btn" onclick="selectDay(1)">
+      <span class="day-title">Day 1</span>
+      <span class="day-date">8/17 (一)</span>
+      <span class="day-weather-sub">🌤️ 31° / 20%</span>
+    </button>
+    <button class="day-btn" onclick="selectDay(2)">
+      <span class="day-title">Day 2</span>
+      <span class="day-date">8/18 (二)</span>
+      <span class="day-weather-sub">☀️ 32° / 10%</span>
+    </button>
+    <button class="day-btn" onclick="selectDay(3)">
+      <span class="day-title">Day 3</span>
+      <span class="day-date">8/19 (三)</span>
+      <span class="day-weather-sub">⛅ 30° / 20%</span>
+    </button>
+    <button class="day-btn" onclick="selectDay(4)">
+      <span class="day-title">Day 4</span>
+      <span class="day-date">8/20 (四)</span>
+      <span class="day-weather-sub">☀️ 31° / 10%</span>
+    </button>
+    <button class="day-btn" onclick="selectDay(5)">
+      <span class="day-title">Day 5</span>
+      <span class="day-date">8/21 (五)</span>
+      <span class="day-weather-sub">🌤️ 30° / 10%</span>
+    </button>
   </div>
 </header>
 
@@ -455,20 +571,21 @@
   <div class="itinerary-list" id="card-container"></div>
 
   <div class="tips-box">
-    <strong>💡 使用說明與導航技巧：</strong><br>
-    • <strong>✨ Gemini 導遊（已複製 Prompt）</strong>：點擊後會直接將專屬提示詞複製進剪貼簿並開啟 Gemini 視窗，切換過去後直接按下 <strong>Ctrl+V / Cmd+V 貼上</strong> 送出即可！<br>
-    • <strong>地圖導航</strong>：自駕推薦以 Apple CarPlay 開啟 <strong>Kakao Map</strong> 或 <strong>NAVER Map</strong>；查看評價與照片可直接點 <strong>🔴 Google Map</strong>。
+    <strong>💡 使用說明與指南針提示：</strong><br>
+    • <strong>🧭 即時坐向</strong>：點擊上方「🧭 坐向」區塊即可啟用手機陀螺儀/磁力計（iPhone 會跳出權限確認），轉動手機即可即時顯示當前方塊度數與方位（如「正北 0°」、「東北 45°」）。<br>
+    • <strong>🔄 重新定位</strong>：手動切換日期後，若想立刻回到「目前時間點該去的地點」，點擊右上角按鈕即可。<br>
+    • <strong>✨ Gemini 導遊</strong>：點擊後會自動複製專屬提示詞並開啟視窗，直接按下 <strong>Ctrl+V / Cmd+V 貼上</strong> 送出即可。
   </div>
 
   <div class="footer-meta">
-    濟州自駕即時助理 • Version Code: <span id="ver-footer">v3.2.0 (Build 20260817)</span>
+    濟州自駕即時助理 • Version Code: <span id="ver-footer">v3.4.0 (Build 20260817)</span>
   </div>
 </main>
 
 <div id="toast">已複製到剪貼簿</div>
 
 <script>
-const VERSION_CODE = "v3.2.0 (Build 20260817)";
+const VERSION_CODE = "v3.4.0 (Build 20260817)";
 
 const tripData = {
   1: {
@@ -877,10 +994,8 @@ function askGeminiGuide(title, korName, engName, address) {
 2. 🚗 距離此處車程 10~15 分鐘以內、在地人高評價（4.2 星以上）的 2 個私房隱藏景點或必吃美食/咖啡廳（請附上韓文名以便導航）。
 3. ⚠️ 現場參觀、自駕停車或避坑的實用建議。`;
 
-  // 1. Copy Prompt to clipboard for reliable paste
   copyText(prompt, "提示詞！跳轉後直接按 Ctrl+V 貼上送出");
 
-  // 2. Open Gemini Web
   const geminiUrl = `https://gemini.google.com/app`;
   setTimeout(() => {
     window.open(geminiUrl, '_blank');
@@ -1035,9 +1150,123 @@ function selectDay(dayIndex) {
   document.getElementById('focus-banner').style.display = 'none';
 }
 
+function manualRefresh() {
+  const auto = autoDetectDayAndHighlight();
+  const focusBanner = document.getElementById('focus-banner');
+  const focusContent = document.getElementById('focus-content');
+  const focusTimeTag = document.getElementById('focus-time-tag');
+
+  focusBanner.style.display = 'block';
+  if (auto.isToday && auto.item) {
+    focusTimeTag.innerText = `Day ${auto.day} 當前`;
+    focusContent.innerHTML = `${auto.item.title} <span style="font-size:13px; font-weight:normal; color:#93c5fd;">(${auto.item.time})</span>`;
+    renderDay(auto.day, auto.item.id);
+    showToast("已重新定位至目前進行中行程");
+  } else {
+    focusTimeTag.innerText = `預設起點 (Day 1)`;
+    focusContent.innerText = `8/17 第一天行程：09:25 抵達濟州國際機場`;
+    renderDay(1, 'd1-1');
+    showToast("已重設至第 1 天起點");
+  }
+}
+
+/* =========================================================
+   COMPASS & DEVICE ORIENTATION LOGIC
+   ========================================================= */
+let isCompassActive = false;
+
+function degreesToDirection(deg) {
+  const directions = [
+    { name: "正北 (N)", min: 348.75, max: 360 },
+    { name: "正北 (N)", min: 0, max: 11.25 },
+    { name: "北東北 (NNE)", min: 11.25, max: 33.75 },
+    { name: "東北 (NE)", min: 33.75, max: 56.25 },
+    { name: "東東北 (ENE)", min: 56.25, max: 78.75 },
+    { name: "正東 (E)", min: 78.75, max: 101.25 },
+    { name: "東東南 (ESE)", min: 101.25, max: 123.75 },
+    { name: "東南 (SE)", min: 123.75, max: 146.25 },
+    { name: "南東南 (SSE)", min: 146.25, max: 168.75 },
+    { name: "正南 (S)", min: 168.75, max: 191.25 },
+    { name: "南西南 (SSW)", min: 191.25, max: 213.75 },
+    { name: "西南 (SW)", min: 213.75, max: 236.25 },
+    { name: "西西南 (WSW)", min: 236.25, max: 258.75 },
+    { name: "正西 (W)", min: 258.75, max: 281.25 },
+    { name: "西西北 (WNW)", min: 281.25, max: 303.75 },
+    { name: "西北 (NW)", min: 303.75, max: 326.25 },
+    { name: "北西北 (NNW)", min: 326.25, max: 348.75 }
+  ];
+  for (let d of directions) {
+    if (deg >= d.min && deg < d.max) return d.name;
+  }
+  return "正北 (N)";
+}
+
+function handleOrientation(event) {
+  let heading = null;
+
+  // iOS WebKit compass heading (Absolute true heading)
+  if (typeof event.webkitCompassHeading !== "undefined") {
+    heading = event.webkitCompassHeading;
+  } 
+  // Standard DeviceOrientation API (Android / other browsers)
+  else if (event.absolute && event.alpha !== null) {
+    heading = 360 - event.alpha;
+  } else if (event.alpha !== null) {
+    heading = 360 - event.alpha;
+  }
+
+  if (heading !== null) {
+    heading = Math.round(heading);
+    if (heading < 0) heading += 360;
+    if (heading >= 360) heading -= 360;
+
+    const dirStr = degreesToDirection(heading);
+    document.getElementById('compass-text').innerText = `🧭 ${dirStr} ${heading}°`;
+    document.getElementById('compass-needle').style.transform = `rotate(${heading}deg)`;
+    document.getElementById('compass-hint').innerText = "即時連線中";
+    document.getElementById('compass-hint').style.color = "#10b981";
+  }
+}
+
+function requestCompassPermission() {
+  if (isCompassActive) {
+    showToast("指南針已在持續運作中");
+    return;
+  }
+
+  // iOS 13+ requires explicit user permission request via user action
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then(response => {
+        if (response === 'granted') {
+          window.addEventListener('deviceorientation', handleOrientation, true);
+          isCompassActive = true;
+          showToast("已取得 iPhone 指南針權限！");
+        } else {
+          showToast("已拒絕指南針權限 (可在 iOS 設定中重啟)");
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        showToast("無法啟用指南針: " + err.message);
+      });
+  } 
+  // Android & Other standard browsers
+  else if ('ondeviceorientationabsolute' in window) {
+    window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    isCompassActive = true;
+    showToast("已啟動 Android 絕對方位指南針");
+  } else if ('ondeviceorientation' in window) {
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    isCompassActive = true;
+    showToast("已啟動指南針");
+  } else {
+    showToast("您的裝置或瀏覽器不支援陀螺儀/指南針 API");
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const auto = autoDetectDayAndHighlight();
-  
   const focusBanner = document.getElementById('focus-banner');
   const focusContent = document.getElementById('focus-content');
   const focusTimeTag = document.getElementById('focus-time-tag');
@@ -1052,6 +1281,11 @@ window.addEventListener('DOMContentLoaded', () => {
     focusTimeTag.innerText = `預設起點 (Day 1)`;
     focusContent.innerText = `8/17 第一天行程：09:25 抵達濟州國際機場`;
     renderDay(1, 'd1-1');
+  }
+
+  // Auto try non-iOS direct orientation listener
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+    window.addEventListener('deviceorientation', handleOrientation, true);
   }
 });
 </script>
