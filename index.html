@@ -2,8 +2,10 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="version" content="v3.6.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="version" content="v3.8.0">
 <title>Jeju Helper</title>
 <style>
   :root {
@@ -33,38 +35,40 @@
     padding-bottom: 80px;
     font-size: 15px;
     line-height: 1.5;
-    overscroll-behavior-y: contain;
+    /* 取消 contain，避免 PWA 模式下阻斷頂部 touch 事件 */
+    touch-action: pan-y;
   }
   
-  /* Pull to Refresh Indicator */
+  /* Pull to Refresh Indicator (PWA Optimized) */
   #ptr-indicator {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: 48px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: rgba(30, 41, 59, 0.95);
+    background: rgba(15, 23, 42, 0.95);
     color: var(--accent);
     font-size: 13px;
     font-weight: 700;
     transform: translateY(-100%);
-    transition: transform 0.2s ease, opacity 0.2s ease;
-    z-index: 100;
-    backdrop-filter: blur(8px);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    z-index: 999;
+    backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--card-border);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   }
   #ptr-indicator.visible {
     transform: translateY(0);
   }
   .ptr-spinner {
     display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(56, 189, 248, 0.3);
+    width: 16px;
+    height: 16px;
+    border: 2.5px solid rgba(56, 189, 248, 0.3);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: ptr-spin 0.8s linear infinite;
@@ -103,6 +107,30 @@
   }
   .brand-logo span.highlight {
     color: var(--accent);
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pwa-refresh-icon {
+    background: #334155;
+    border: 1px solid #475569;
+    color: #94a3b8;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .pwa-refresh-icon:active {
+    background: var(--accent);
+    color: #0f172a;
+    transform: scale(0.9);
   }
   .version-tag {
     background: #334155;
@@ -445,17 +473,17 @@
     line-height: 1.4;
   }
 
-  /* Action Buttons (2 Rows: Maps + Gemini Guide) */
+  /* Action Buttons (4 Navigation Apps: Kakao, NAVER, Google, Waze) */
   .card-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
     margin-top: 12px;
   }
   .nav-btn {
     border: none;
     border-radius: 6px;
-    padding: 8px 4px;
+    padding: 8px 3px;
     font-size: 11px;
     font-weight: 600;
     text-align: center;
@@ -471,6 +499,7 @@
   .nav-btn.kakao { background: #fee500; color: #191919; }
   .nav-btn.naver { background: #03c75a; color: #fff; }
   .nav-btn.google { background: #ea4335; color: #fff; }
+  .nav-btn.waze { background: #33ccff; color: #0f172a; }
 
   /* Full-width Gemini AI Guide button */
   .gemini-action-box {
@@ -532,7 +561,7 @@
     box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     opacity: 0;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    z-index: 100;
+    z-index: 1000;
     pointer-events: none;
     max-width: 90%;
     text-align: center;
@@ -558,8 +587,9 @@
       <span class="logo-icon">🍊</span>
       <span>Jeju <span class="highlight">Helper</span></span>
     </div>
-    <div class="header-badges">
-      <span class="version-tag" id="ver-badge">v3.6.0</span>
+    <div class="header-right">
+      <div class="pwa-refresh-icon" onclick="autoRelocate()" title="重新定位目前時間行程">🔄</div>
+      <span class="version-tag" id="ver-badge">v3.8.0</span>
     </div>
   </div>
 
@@ -636,21 +666,22 @@
   <div class="itinerary-list" id="card-container"></div>
 
   <div class="tips-box">
-    <strong>💡 手勢與指南針提示：</strong><br>
-    • <strong>🔄 下拉重新定位 (Pull to Refresh)</strong>：手動切換日期後，只要在頁面頂部向下拉動即可重新判定並鎖定當前時間對應的景點。<br>
-    • <strong>🧭 即時坐向</strong>：置中 1.5x 羅盤設計。點擊啟動手機方向感測，啟動後右側會出現「⏹️ 停止」按鈕可隨時關閉節省電力。<br>
-    • <strong>✨ Gemini 導遊</strong>：點擊後會自動複製專屬提示詞並開啟視窗，直接按下 <strong>Ctrl+V / Cmd+V 貼上</strong> 送出即可。
+    <strong>💡 導航與 PWA 使用提示：</strong><br>
+    • <strong>🔄 重新定位</strong>：支援頂部下拉釋放重整，或直接點擊右上角的 <strong>🔄</strong> 按鈕。<br>
+    • <strong>四大導航 App</strong>：支援 💛 Kakao Map、💚 NAVER Map、🔴 Google Map 與 🚙 Waze。<br>
+    • <strong>🧭 即時坐向</strong>：置中 1.5x 羅盤，點擊啟動方向感測，右側「⏹️ 停止」可關閉感測節電。<br>
+    • <strong>✨ Gemini 導遊</strong>：點擊後自動複製專屬提示詞並開啟視窗，直接按下 <strong>Ctrl+V / Cmd+V 貼上</strong> 送出即可。
   </div>
 
   <div class="footer-meta">
-    Jeju Helper • Version Code: <span id="ver-footer">v3.6.0 (Build 20260817)</span>
+    Jeju Helper • Version Code: <span id="ver-footer">v3.8.0 (Build 20260817)</span>
   </div>
 </main>
 
 <div id="toast">已複製到剪貼簿</div>
 
 <script>
-const VERSION_CODE = "v3.6.0 (Build 20260817)";
+const VERSION_CODE = "v3.8.0 (Build 20260817)";
 
 const tripData = {
   1: {
@@ -678,7 +709,8 @@ const tripData = {
         note: "辦理入境與租車手續，預計約 10:30 出發開車。",
         kakaoQuery: "제주국제공항",
         naverQuery: "제주국제공항",
-        googleQuery: "Jeju International Airport 제주국제공항"
+        googleQuery: "Jeju International Airport 제주국제공항",
+        wazeQuery: "Jeju International Airport"
       },
       {
         id: "d1-2",
@@ -694,7 +726,8 @@ const tripData = {
         note: "逢 2、7 開市，正好趕上！推薦感受當地市集氛圍並享用平價道地小吃。",
         kakaoQuery: "제주민속오일시장",
         naverQuery: "제주민속오일시장",
-        googleQuery: "Jeju Folk Five-Day Oil Market 제주민속오일시장"
+        googleQuery: "Jeju Folk Five-Day Oil Market 제주민속오일시장",
+        wazeQuery: "제주민속오일시장"
       },
       {
         id: "d1-3",
@@ -710,7 +743,8 @@ const tripData = {
         note: "體驗無動力重力賽車，冷氣房內暢玩室內遊樂設施，避開午後酷熱時段。",
         kakaoQuery: "9.81파크 제주",
         naverQuery: "9.81파크 제주",
-        googleQuery: "9.81 Park Jeju 9.81파크 제주"
+        googleQuery: "9.81 Park Jeju 9.81파크 제주",
+        wazeQuery: "9.81 Park Jeju"
       },
       {
         id: "d1-4",
@@ -726,7 +760,8 @@ const tripData = {
         note: "西歸浦市區辦理入住，稍作休息洗漱。",
         kakaoQuery: "서귀포 런호텔",
         naverQuery: "서귀포 런호텔",
-        googleQuery: "Run Hotel Seogwipo 서귀포 런호텔"
+        googleQuery: "Run Hotel Seogwipo 서귀포 런호텔",
+        wazeQuery: "서귀포 런호텔"
       },
       {
         id: "d1-5",
@@ -742,7 +777,8 @@ const tripData = {
         note: "高評價黑豬肉推薦：每日偶來豚 (매일올레돈 / 064-763-9289) 或 男妹黑豬肉 (남매흑돼지 / 064-763-6633)。",
         kakaoQuery: "서귀포매일올레시장",
         naverQuery: "서귀포매일올레시장",
-        googleQuery: "Seogwipo Maeil Olle Market 서귀포매일올레시장"
+        googleQuery: "Seogwipo Maeil Olle Market 서귀포매일올레시장",
+        wazeQuery: "서귀포매일올레시장"
       }
     ]
   },
@@ -771,7 +807,8 @@ const tripData = {
         note: "漫步欣賞翠綠深水，可體驗透明獨木舟或黑沙灘踏浪。",
         kakaoQuery: "쇠소깍",
         naverQuery: "쇠소깍",
-        googleQuery: "Soesokkak Estuary 쇠소깍"
+        googleQuery: "Soesokkak Estuary 쇠소깍",
+        wazeQuery: "쇠소깍"
       },
       {
         id: "d2-2",
@@ -787,7 +824,8 @@ const tripData = {
         note: "亞洲最大規模水族館，室內避暑首選，可於館內或周邊享用午餐。",
         kakaoQuery: "아쿠아플라넷 제주",
         naverQuery: "아쿠아플라넷 제주",
-        googleQuery: "Aqua Planet Jeju 아쿠아플라넷 제주"
+        googleQuery: "Aqua Planet Jeju 아쿠아플라넷 제주",
+        wazeQuery: "Aqua Planet Jeju"
       },
       {
         id: "d2-3",
@@ -803,7 +841,8 @@ const tripData = {
         note: "辦理入住，早點吃晚餐就寢，為隔日清晨城山日出儲備體力。",
         kakaoQuery: "보물섬펜션",
         naverQuery: "보물섬펜션",
-        googleQuery: "Bomulseom Pension Jeju 성산 보물섬펜션"
+        googleQuery: "Bomulseom Pension Jeju 성산 보물섬펜션",
+        wazeQuery: "보물섬펜션"
       }
     ]
   },
@@ -832,7 +871,8 @@ const tripData = {
         note: "8月份日出約 05:50。下山後回民宿補眠並於 10:00 前辦理退房。",
         kakaoQuery: "성산일출봉",
         naverQuery: "성산일출봉",
-        googleQuery: "Seongsan Ilchulbong 성산일출봉"
+        googleQuery: "Seongsan Ilchulbong 성산일출봉",
+        wazeQuery: "Seongsan Ilchulbong"
       },
       {
         id: "d3-2",
@@ -848,7 +888,8 @@ const tripData = {
         note: "室內豐富展區與廣大森林庭園拍照散步。",
         kakaoQuery: "스누피가든",
         naverQuery: "스누피가든",
-        googleQuery: "Snoopy Garden Jeju 스누피가든"
+        googleQuery: "Snoopy Garden Jeju 스누피가든",
+        wazeQuery: "Snoopy Garden"
       },
       {
         id: "d3-3",
@@ -864,7 +905,8 @@ const tripData = {
         note: "自然景觀烘焙咖啡廳，享用香醇咖啡與現烤麵包輕食午餐。",
         kakaoQuery: "우정원베이커리 제주삼나무점",
         naverQuery: "우정원베이커리 제주삼나무점",
-        googleQuery: "우정원베이커리 제주삼나무점 Woojungwon Bakery Jeju"
+        googleQuery: "우정원베이커리 제주삼나무점 Woojungwon Bakery Jeju",
+        wazeQuery: "우정원베이커리 제주삼나무점"
       },
       {
         id: "d3-4",
@@ -880,7 +922,8 @@ const tripData = {
         note: "洞內常年維持 11~15 度極其涼爽，探索天然玄武岩熔岩隧道。",
         kakaoQuery: "만장굴",
         naverQuery: "만장굴",
-        googleQuery: "Manjanggul Cave 만장굴"
+        googleQuery: "Manjanggul Cave 만장굴",
+        wazeQuery: "Manjanggul Cave"
       },
       {
         id: "d3-5",
@@ -896,7 +939,8 @@ const tripData = {
         note: "市中心便利飯店，步行即可抵達商圈與市場。",
         kakaoQuery: "대동호텔",
         naverQuery: "대동호텔",
-        googleQuery: "Daedong Hotel Jeju 대동호텔"
+        googleQuery: "Daedong Hotel Jeju 대동호텔",
+        wazeQuery: "대동호텔"
       },
       {
         id: "d3-6",
@@ -912,7 +956,8 @@ const tripData = {
         note: "散步即達，大啖熱門夜市小吃、生魚片與柑橘甜品。",
         kakaoQuery: "동문재래시장",
         naverQuery: "동문재래시장",
-        googleQuery: "Dongmun Traditional Market 동문재래시장"
+        googleQuery: "Dongmun Traditional Market 동문재래시장",
+        wazeQuery: "Dongmun Traditional Market"
       }
     ]
   },
@@ -941,7 +986,8 @@ const tripData = {
         note: "沿著海岸線散步，挑選特色海景咖啡廳戶外座吹海風享用下午茶。",
         kakaoQuery: "애월한담해변",
         naverQuery: "애월한담해변",
-        googleQuery: "Aewol Cafe Street 애월카페거리"
+        googleQuery: "Aewol Cafe Street 애월카페거리",
+        wazeQuery: "애월한담해변"
       },
       {
         id: "d4-2",
@@ -957,7 +1003,8 @@ const tripData = {
         note: "打卡紅白雙色小馬造型防波堤燈塔，留念經典地標。",
         kakaoQuery: "이호테우해수욕장",
         naverQuery: "이호테우해수욕장",
-        googleQuery: "Iho Tewoo Beach 이호테우해수욕장"
+        googleQuery: "Iho Tewoo Beach 이호테우해수욕장",
+        wazeQuery: "Iho Tewoo Beach"
       },
       {
         id: "d4-3",
@@ -973,7 +1020,8 @@ const tripData = {
         note: "返回濟州市區飯店周邊採買伴手禮，挑選市區特色餐廳為旅程慶祝。",
         kakaoQuery: "칠성로상점가",
         naverQuery: "칠성로상점가",
-        googleQuery: "Chilseongro Shopping Street 칠성로상점가"
+        googleQuery: "Chilseongro Shopping Street 칠성로상점가",
+        wazeQuery: "Chilseong-ro Shopping Street"
       }
     ]
   },
@@ -1002,7 +1050,8 @@ const tripData = {
         note: "辦理還車手續、退稅與登機報到，準備搭乘 10:30 班機平安返家。",
         kakaoQuery: "제주국제공항",
         naverQuery: "제주국제공항",
-        googleQuery: "Jeju International Airport 제주국제공항"
+        googleQuery: "Jeju International Airport 제주국제공항",
+        wazeQuery: "Jeju International Airport"
       }
     ]
   }
@@ -1010,14 +1059,12 @@ const tripData = {
 
 let currentSelectedDay = 1;
 
-// Korean Time (UTC+9) calculation
 function getKSTDate() {
   const now = new Date();
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   return new Date(utc + (3600000 * 9));
 }
 
-// Copy text utility
 function copyText(text, label) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(() => {
@@ -1041,7 +1088,6 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// Ask Gemini by Prompt & URL
 function askGeminiGuide(title, korName, engName, address) {
   const prompt = `我現在正在濟州島自駕旅遊，目前地點在【${korName} / ${engName}】（地址：${address}）。
 請以繁體中文 (台灣) 為我提供：
@@ -1057,7 +1103,6 @@ function askGeminiGuide(title, korName, engName, address) {
   }, 500);
 }
 
-// Determine auto day and active slot
 function autoDetectDayAndHighlight() {
   const kst = getKSTDate();
   const curYMD = `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,'0')}-${String(kst.getDate()).padStart(2,'0')}`;
@@ -1128,6 +1173,7 @@ function renderDay(dayIndex, highlightItemId = null) {
     card.id = item.id;
 
     const googleMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.googleQuery)}`;
+    const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(item.wazeQuery)}&navigate=yes`;
 
     const safeTitle = item.title.replace(/'/g, "\'");
     const safeKor = item.korName.replace(/'/g, "\'");
@@ -1170,13 +1216,16 @@ function renderDay(dayIndex, highlightItemId = null) {
 
       <div class="card-actions">
         <a class="nav-btn kakao" href="kakaomap://search?q=${encodeURIComponent(item.kakaoQuery)}" target="_blank">
-          <span>💛 Kakao Map</span>
+          <span>💛 Kakao</span>
         </a>
         <a class="nav-btn naver" href="nmap://search?query=${encodeURIComponent(item.naverQuery)}" target="_blank">
-          <span>💚 NAVER Map</span>
+          <span>💚 NAVER</span>
         </a>
         <a class="nav-btn google" href="${googleMapUrl}" target="_blank">
-          <span>🔴 Google Map</span>
+          <span>🔴 Google</span>
+        </a>
+        <a class="nav-btn waze" href="${wazeUrl}" target="_blank">
+          <span>🚙 Waze</span>
         </a>
       </div>
 
@@ -1226,7 +1275,7 @@ function autoRelocate() {
 }
 
 /* =========================================================
-   PULL TO REFRESH IMPLEMENTATION
+   PULL TO REFRESH IMPLEMENTATION (PWA Touch Optimized)
    ========================================================= */
 let startY = 0;
 let currentY = 0;
@@ -1235,21 +1284,21 @@ const ptrIndicator = document.getElementById('ptr-indicator');
 const ptrText = document.getElementById('ptr-text');
 const ptrSpinner = document.getElementById('ptr-spinner');
 
-window.addEventListener('touchstart', (e) => {
-  if (window.scrollY === 0) {
-    startY = e.touches[0].pageY;
+document.addEventListener('touchstart', (e) => {
+  if (window.scrollY <= 5) {
+    startY = e.touches[0].screenY;
     isPulling = true;
   }
 }, { passive: true });
 
-window.addEventListener('touchmove', (e) => {
+document.addEventListener('touchmove', (e) => {
   if (!isPulling) return;
-  currentY = e.touches[0].pageY;
+  currentY = e.touches[0].screenY;
   const distance = currentY - startY;
 
-  if (distance > 30 && window.scrollY === 0) {
+  if (distance > 20 && window.scrollY <= 5) {
     ptrIndicator.classList.add('visible');
-    if (distance > 80) {
+    if (distance > 70) {
       ptrText.innerText = "⚡ 釋放立即重新定位";
     } else {
       ptrText.innerText = "👇 下拉以重新定位行程";
@@ -1257,11 +1306,11 @@ window.addEventListener('touchmove', (e) => {
   }
 }, { passive: true });
 
-window.addEventListener('touchend', () => {
+document.addEventListener('touchend', () => {
   if (!isPulling) return;
   const distance = currentY - startY;
 
-  if (distance > 80 && window.scrollY === 0) {
+  if (distance > 70 && window.scrollY <= 5) {
     ptrText.innerText = "正在重新計算行程...";
     ptrSpinner.style.display = "inline-block";
     
