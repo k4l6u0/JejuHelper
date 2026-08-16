@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="version" content="v4.1.0">
+<meta name="version" content="v4.2.0">
 <title>Jeju Helper</title>
 <style>
   :root {
@@ -328,6 +328,123 @@
   .weather-rain {
     font-size: 11px;
     color: #38bdf8;
+  }
+
+  /* Currency Converter Card */
+  .currency-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1.5px solid #334155;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+  .currency-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-bottom: 10px;
+  }
+  .currency-header span.title {
+    color: #f8fafc;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .currency-rate-badge {
+    background: #334155;
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: monospace;
+  }
+  .currency-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .currency-input-wrap {
+    flex: 1.2;
+    position: relative;
+  }
+  .currency-input-wrap input {
+    width: 100%;
+    background: #0f172a;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 8px 10px 8px 28px;
+    color: #f8fafc;
+    font-size: 16px;
+    font-weight: 700;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .currency-input-wrap input:focus {
+    border-color: var(--accent);
+  }
+  .currency-symbol {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .currency-equal {
+    color: #94a3b8;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .currency-result-wrap {
+    flex: 1.2;
+    background: #0f172a;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .currency-result-val {
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .currency-result-unit {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .currency-presets {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .currency-presets::-webkit-scrollbar { display: none; }
+  .preset-btn {
+    flex: 0 0 auto;
+    background: #334155;
+    border: 1px solid #475569;
+    color: #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .preset-btn:active {
+    background: var(--accent);
+    color: #0f172a;
   }
 
   /* HUD Next Station Dashboard Card */
@@ -684,7 +801,7 @@
     </div>
     <div class="header-right">
       <div class="pwa-refresh-icon" onclick="autoRelocate()" title="重新定位目前時間行程">🔄</div>
-      <span class="version-tag" id="ver-badge">v4.1.0</span>
+      <span class="version-tag" id="ver-badge">v4.2.0</span>
     </div>
   </div>
 
@@ -748,6 +865,32 @@
     </div>
   </div>
 
+  <!-- Currency Converter Card (KRW -> TWD) -->
+  <div class="currency-card">
+    <div class="currency-header">
+      <span class="title">💱 韓元即時換算 (KRW ➔ TWD)</span>
+      <span class="currency-rate-badge" id="rate-badge">匯率: 0.024</span>
+    </div>
+    <div class="currency-input-row">
+      <div class="currency-input-wrap">
+        <span class="currency-symbol">₩</span>
+        <input type="number" id="krw-input" value="50000" step="1000" min="0" oninput="calculateTWD()">
+      </div>
+      <span class="currency-equal">≈</span>
+      <div class="currency-result-wrap">
+        <span class="currency-result-val" id="twd-result">NT$ 1,200</span>
+        <span class="currency-result-unit">TWD</span>
+      </div>
+    </div>
+    <div class="currency-presets">
+      <button class="preset-btn" onclick="setPresetKRW(5000)">₩5,000</button>
+      <button class="preset-btn" onclick="setPresetKRW(15000)">₩15,000</button>
+      <button class="preset-btn" onclick="setPresetKRW(50000)">₩50,000</button>
+      <button class="preset-btn" onclick="setPresetKRW(100000)">₩100,000</button>
+      <button class="preset-btn" onclick="setPresetKRW(300000)">₩300,000</button>
+    </div>
+  </div>
+
   <!-- HUD Next Station Dashboard Card -->
   <div class="hud-banner" id="hud-banner">
     <div class="hud-header">
@@ -779,6 +922,7 @@
 
   <div class="tips-box">
     <strong>💡 導航與即時功能提示：</strong><br>
+    • <strong>💱 韓元換算小工具</strong>：直接輸入韓元金額即可秒算台幣，附常用預設金額快速點選。<br>
     • <strong>🌤️ Open-Meteo 即時氣象</strong>：連網時自動抓取濟州未來幾天最新真實溫差與降雨機率。<br>
     • <strong>🚗 OSRM 緊湊公路導航</strong>：每張卡片頂部時間後方直接顯示實際路徑里程與車程。<br>
     • <strong>四大導航 App</strong>：支援 💛 Kakao Map、💚 NAVER Map、🔴 Google Map 與 🚙 Waze。<br>
@@ -787,14 +931,29 @@
   </div>
 
   <div class="footer-meta">
-    Jeju Helper • Version Code: <span id="ver-footer">v4.1.0 (Build 20260817)</span>
+    Jeju Helper • Version Code: <span id="ver-footer">v4.2.0 (Build 20260817)</span>
   </div>
 </main>
 
 <div id="toast">已複製到剪貼簿</div>
 
 <script>
-const VERSION_CODE = "v4.1.0 (Build 20260817)";
+const VERSION_CODE = "v4.2.0 (Build 20260817)";
+const DEFAULT_RATE = 0.024; // 1 KRW = 0.024 TWD
+
+// Currency Calculation
+function calculateTWD() {
+  const krwInput = document.getElementById('krw-input');
+  const twdResult = document.getElementById('twd-result');
+  const krw = parseFloat(krwInput.value) || 0;
+  const twd = Math.round(krw * DEFAULT_RATE);
+  twdResult.innerText = `NT$ ${twd.toLocaleString()}`;
+}
+
+function setPresetKRW(amount) {
+  document.getElementById('krw-input').value = amount;
+  calculateTWD();
+}
 
 // Precise POI Coordinates (Lat, Lng)
 const POI_COORDS = {
@@ -1437,7 +1596,6 @@ function autoDetectDayAndHighlight() {
   let matchedDay = null;
   let isToday = false;
 
-  // 1. Date Exact Match (e.g. 2026-08-19 -> Day 3)
   for (let d = 1; d <= 5; d++) {
     if (tripData[d].dateStr === curYMD) {
       matchedDay = d;
@@ -1446,12 +1604,11 @@ function autoDetectDayAndHighlight() {
     }
   }
 
-  // 2. Date Boundary Fallbacks
   if (!matchedDay) {
     if (curYMD < tripData[1].dateStr) {
-      matchedDay = 1; // Before trip -> D1 preview
+      matchedDay = 1;
     } else if (curYMD > tripData[5].dateStr) {
-      matchedDay = 5; // After trip -> D5
+      matchedDay = 5;
     } else {
       matchedDay = 1;
     }
@@ -1778,6 +1935,7 @@ window.addEventListener('DOMContentLoaded', () => {
   autoRelocate();
   requestGPS();
   fetchLiveOpenMeteo();
+  calculateTWD();
 });
 </script>
 </body>
